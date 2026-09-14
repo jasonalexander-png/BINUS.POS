@@ -17,8 +17,8 @@
         // --- 2. DATABASE (Supabase) ---
         // GANTI dua baris ini dengan URL & anon key project Supabase kamu sendiri
         // (Supabase Dashboard -> Project Settings -> API)
-        const SUPABASE_URL = "GANTI_DENGAN_SUPABASE_URL_KAMU";
-        const SUPABASE_ANON_KEY = "GANTI_DENGAN_SUPABASE_ANON_KEY_KAMU";
+        const SUPABASE_URL = "https://tlldnxzclnlxyfrikgsi.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsbGRueHpjbG5seHlmcmlrZ3NpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDk4NzAsImV4cCI6MjEwNDk4NTg3MH0.dQbuZw1FV6ma5hZcHZPxV3vgyNyXWAKOFU10z_gd15g";
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let db = { inventory: [], sales: [], expenses: [], returns: [] };
