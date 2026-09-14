@@ -1,0 +1,113 @@
+:root {
+            --primary: #0f172a; --secondary: #2563eb; --accent: #16a34a; 
+            --danger: #dc2626; --warning: #d97706; --bg: #f8fafc; --text: #1e293b; --border: #cbd5e1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { display: flex; height: 100vh; background-color: var(--bg); color: var(--text); }
+        
+        /* Sidebar */
+        .sidebar { width: 260px; background-color: var(--primary); color: white; display: flex; flex-direction: column; padding: 20px 0; }
+        .sidebar h2 { text-align: center; margin-bottom: 30px; font-size: 20px; border-bottom: 1px solid #334155; padding-bottom: 20px; }
+        .nav-btn { background: none; border: none; color: #cbd5e1; padding: 15px 25px; text-align: left; font-size: 15px; cursor: pointer; transition: 0.2s; width: 100%; font-weight: 500; }
+        .nav-btn:hover, .nav-btn.active { background-color: #1e293b; color: white; border-left: 5px solid var(--secondary); }
+        
+        /* Main Content */
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; }
+        .tab-pane { display: none; animation: fadeIn 0.3s; }
+        .tab-pane.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        h1 { margin-bottom: 25px; color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 10px; font-size: 24px; }
+        
+        /* Layouts & Cards */
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        
+        /* Brand Filters */
+        .brand-filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .brand-btn { padding: 8px 15px; border: 1px solid var(--secondary); background: white; color: var(--secondary); border-radius: 20px; cursor: pointer; font-weight: bold; }
+        .brand-btn.active { background: var(--secondary); color: white; }
+        
+        /* Forms & Buttons */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #475569; }
+        input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; outline: none; }
+        input[readonly] { background-color: #f1f5f9; font-weight: bold; color: var(--warning); }
+        
+        .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-primary { background-color: var(--secondary); color: white; }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-success { background-color: var(--accent); color: white; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-warning { background-color: var(--warning); color: white; }
+        .btn-outline { background: transparent; border: 1px solid white; color: white; width: 100%; margin-bottom: 8px; }
+        .btn-outline:hover { background: rgba(255,255,255,0.1); }
+        
+        /* Tables */
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; }
+        th { background-color: #f8fafc; font-weight: 600; color: var(--primary); }
+        .badge { padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
+
+        /* MODAL LIHAT NOTA */
+        #viewNotaModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
+        .nota-modal-box { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .nota-modal-box h3 { margin-top: 0; border-bottom: 2px solid var(--border); padding-bottom: 10px; color: var(--primary); }
+        .nota-modal-close { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; float: right; font-weight: bold; }
+        
+        /* PRINT STYLES - KHUSUS PRINTER THERMAL (KASIR) */
+        @media print {
+            body * { visibility: hidden; }
+            
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { 
+                position: absolute; 
+                left: 0; top: 0; 
+                width: 100%; 
+                max-width: 80mm; 
+                padding: 5px; 
+                font-family: 'Courier New', Courier, monospace; 
+                color: black; 
+                background: white; 
+                font-size: 12px;
+                line-height: 1.2;
+            }
+            
+            @page { margin: 0; }
+            
+            .t-center { text-align: center; }
+            .t-right { text-align: right; }
+            .t-left { text-align: left; }
+            .fw-bold { font-weight: bold; }
+            
+            .header-thermal h2 { margin: 0; font-size: 18px; text-transform: uppercase; }
+            .header-thermal p { margin: 2px 0; font-size: 11px; }
+            .divider { border-bottom: 1px dashed black; margin: 8px 0; }
+            
+            .table-thermal { width: 100%; margin: 5px 0; }
+            .table-thermal td { padding: 2px 0; vertical-align: top; border: none; font-size: 12px; }
+            .nota-item-name { display: block; font-weight: bold; margin-bottom: 2px; }
+
+            /* CSS KHUSUS WATERMARK COPY & DOUBLE PRINT */
+            .receipt-wrapper { position: relative; overflow: hidden; padding-bottom: 10px; margin-bottom: 20px; }
+            .watermark-copy {
+                position: absolute;
+                top: 40%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(-45deg);
+                font-size: 50px;
+                color: rgba(0, 0, 0, 0.15) !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+                font-weight: 900;
+                z-index: 999;
+                pointer-events: none;
+                letter-spacing: 5px;
+                border: 3px solid rgba(0, 0, 0, 0.15);
+                padding: 5px 15px;
+            }
+            .page-break { page-break-after: always; }
+        }
