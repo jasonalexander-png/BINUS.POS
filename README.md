@@ -60,7 +60,7 @@ Aplikasi ini menangani alur kerja toko dari ujung ke ujung: manajemen stok & mer
 
 ---
 
-## 🚀 Cara Menjalankan
+## 🚀 Cara Menjalankan (Preview)
 
 1. Unduh file `binus_pos.html`
 2. Buka file tersebut langsung di browser (double click, atau `File → Open`)
