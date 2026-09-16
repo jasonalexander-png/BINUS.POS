@@ -1,4 +1,67 @@
-// --- 1. UTILITIES ---
+        function showAlert(message) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('customDialogOverlay');
+                document.getElementById('customDialogMessage').textContent = message;
+                document.getElementById('customDialogInputWrap').style.display = 'none';
+                const cancelBtn = document.getElementById('customDialogCancelBtn');
+                const okBtn = document.getElementById('customDialogOkBtn');
+                cancelBtn.style.display = 'none';
+                okBtn.textContent = 'OK';
+                overlay.style.display = 'flex';
+                const cleanup = () => { overlay.style.display = 'none'; okBtn.onclick = null; };
+                okBtn.onclick = () => { cleanup(); resolve(); };
+            });
+        }
+
+        function showConfirm(message) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('customDialogOverlay');
+                document.getElementById('customDialogMessage').textContent = message;
+                document.getElementById('customDialogInputWrap').style.display = 'none';
+                const cancelBtn = document.getElementById('customDialogCancelBtn');
+                const okBtn = document.getElementById('customDialogOkBtn');
+                cancelBtn.style.display = 'inline-flex';
+                cancelBtn.textContent = 'Batal';
+                okBtn.textContent = 'Ya, Lanjutkan';
+                overlay.style.display = 'flex';
+                const cleanup = () => { overlay.style.display = 'none'; okBtn.onclick = null; cancelBtn.onclick = null; };
+                okBtn.onclick = () => { cleanup(); resolve(true); };
+                cancelBtn.onclick = () => { cleanup(); resolve(false); };
+            });
+        }
+
+        function showPrompt(message, defaultValue) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('customDialogOverlay');
+                document.getElementById('customDialogMessage').textContent = message;
+                const inputWrap = document.getElementById('customDialogInputWrap');
+                const input = document.getElementById('customDialogInput');
+                inputWrap.style.display = 'block';
+                input.value = defaultValue || '';
+                const cancelBtn = document.getElementById('customDialogCancelBtn');
+                const okBtn = document.getElementById('customDialogOkBtn');
+                cancelBtn.style.display = 'inline-flex';
+                cancelBtn.textContent = 'Batal';
+                okBtn.textContent = 'OK';
+                overlay.style.display = 'flex';
+                setTimeout(() => input.focus(), 50);
+                const cleanup = () => { overlay.style.display = 'none'; okBtn.onclick = null; cancelBtn.onclick = null; input.onkeydown = null; inputWrap.style.display = 'none'; };
+                okBtn.onclick = () => { const v = input.value; cleanup(); resolve(v); };
+                cancelBtn.onclick = () => { cleanup(); resolve(null); };
+                input.onkeydown = (e) => { if (e.key === 'Enter') okBtn.onclick(); };
+            });
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function formatRupiahInput(ele) {
             let val = ele.value.replace(/[^0-9]/g, '');
             if (val) ele.value = new Intl.NumberFormat('id-ID').format(val);
@@ -14,11 +77,8 @@
             return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
         };
 
-        // --- 2. DATABASE (Supabase) ---
-        // GANTI dua baris ini dengan URL & anon key project Supabase kamu sendiri
-        // (Supabase Dashboard -> Project Settings -> API)
         const SUPABASE_URL = "https://tlldnxzclnlxyfrikgsi.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsbGRueHpjbG5seHlmcmlrZ3NpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDk4NzAsImV4cCI6MjEwNDk4NTg3MH0.dQbuZw1FV6ma5hZcHZPxV3vgyNyXWAKOFU10z_gd15g";
+        const SUPABASE_ANON_KEY = "sb_publishable_vqFLtSaTzefFiE9L1UAE0g_h4cBdKAj";
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let db = { inventory: [], sales: [], expenses: [], returns: [] };
@@ -26,9 +86,6 @@
         let currentBrandFilter = 'SEMUA';
         let currentEditId = null;
 
-        // --- Mapping antara nama kolom di database (snake_case) <-> nama properti di kode JS (camelCase) ---
-        // Ini supaya seluruh fungsi render/logic yang sudah ada (yang pakai item.hargaSupp, dst)
-        // tidak perlu diubah sama sekali, cukup di titik masuk/keluar data ini saja.
         function productToRow(p) {
             return { id: p.id, merek: p.merek, nama: p.nama, stok: p.stok, harga_supp: p.hargaSupp, diskon1: p.diskon1 || 0, diskon2: p.diskon2 || 0, diskon3: p.diskon3 || 0, modal_akhir: p.modalAkhir, jual: p.jual };
         }
@@ -54,7 +111,6 @@
             return { id: r.id, tgl: r.tgl, ket: r.ket, nominal: r.nominal };
         }
 
-        // Ambil semua data dari Supabase sekali di awal, taruh ke variabel `db` seperti biasa
         async function loadAllData() {
             const [prodRes, saleRes, expRes, retRes] = await Promise.all([
                 sb.from('products').select('*').order('id'),
@@ -97,7 +153,6 @@
             }
         }
 
-        // --- BACKUP & RESTORE ---
         function backupData() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
             const downloadAnchorElem = document.createElement('a');
@@ -115,29 +170,26 @@
             reader.onload = async function(e) {
                 try {
                     const importedDB = JSON.parse(e.target.result);
-                    if(!importedDB.inventory || !importedDB.sales) { alert("File salah."); return; }
-                    if(!confirm('Ini akan MENGGANTI SELURUH data di database dengan isi file backup ini. Yakin lanjut?')) return;
+                    if(!importedDB.inventory || !importedDB.sales) { showAlert("File salah."); return; }
+                    if(!await showConfirm('Ini akan MENGGANTI SELURUH data di database dengan isi file backup ini. Yakin lanjut?')) return;
 
-                    // Hapus semua data lama di tiap tabel
                     await sb.from('products').delete().gt('id', 0);
                     await sb.from('sales').delete().neq('id', '');
                     await sb.from('expenses').delete().gt('id', 0);
                     await sb.from('returns').delete().gt('id', 0);
 
-                    // Masukkan data dari file backup
                     if (importedDB.inventory.length) await sb.from('products').insert(importedDB.inventory.map(productToRow));
                     if (importedDB.sales.length) await sb.from('sales').insert(importedDB.sales.map(saleToRow));
                     if (importedDB.expenses?.length) await sb.from('expenses').insert(importedDB.expenses.map(expenseToRow));
                     if (importedDB.returns?.length) await sb.from('returns').insert(importedDB.returns.map(returnToRow));
 
-                    alert("Data dipulihkan!");
+                    showAlert("Data dipulihkan!");
                     window.location.reload();
-                } catch(err) { alert("Error: " + err.message); }
+                } catch(err) { showAlert("Error: " + err.message); }
             };
             reader.readAsText(file);
         }
 
-        // --- 3. MEREK DINAMIS ---
         function updateMerekDinamis() {
             const uniqueBrands = [...new Set(db.inventory.map(item => item.merek))].sort();
             const datalist = document.getElementById('listMerekDin'); datalist.innerHTML = '';
@@ -148,25 +200,22 @@
             kasirSelect.innerHTML = `<option value="SEMUA">Semua Merek</option>`;
 
             uniqueBrands.forEach(brand => {
-                datalist.innerHTML += `<option value="${brand}">`;
+                const safeBrand = escapeHtml(brand);
+                datalist.innerHTML += `<option value="${safeBrand}">`;
                 const isActive = currentBrandFilter === brand ? 'active' : '';
-                filterContainer.innerHTML += `<button class="brand-btn ${isActive}" onclick="filterMerek('${brand}', this)">${brand}</button>`;
+                filterContainer.innerHTML += `<button class="brand-btn ${isActive}" onclick="filterMerek('${safeBrand}', this)">${safeBrand}</button>`;
                 const isSelected = currentKasirVal === brand ? 'selected' : '';
-                kasirSelect.innerHTML += `<option value="${brand}" ${isSelected}>${brand}</option>`;
+                kasirSelect.innerHTML += `<option value="${safeBrand}" ${isSelected}>${safeBrand}</option>`;
             });
         }
 
-        // --- 4. STOK & EDIT BARANG ---
         function kalkulasiModal() {
             const hrgSupp = parseRp(document.getElementById('brgHargaSupp').value);
             const d1 = Number(document.getElementById('brgDiskon1').value) || 0;
             const d2 = Number(document.getElementById('brgDiskon2').value) || 0;
             const d3 = Number(document.getElementById('brgDiskon3').value) || 0;
-            
-            let modal = hrgSupp - (hrgSupp * d1 / 100);
-            modal = modal - (modal * d2 / 100);
-            modal = modal - (modal * d3 / 100);
-            
+
+            const modal = hitungModalAkhir(hrgSupp, d1, d2, d3);
             document.getElementById('brgModalAkhir').value = formatRp(modal);
 
             const jual = parseRp(document.getElementById('brgJual').value);
@@ -217,16 +266,13 @@
             const d1 = Number(document.getElementById('brgDiskon1').value) || 0;
             const d2 = Number(document.getElementById('brgDiskon2').value) || 0;
             const d3 = Number(document.getElementById('brgDiskon3').value) || 0;
-            
-            let modal = hargaSupp - (hargaSupp * d1 / 100);
-            modal = modal - (modal * d2 / 100);
-            const modalAkhir = modal - (modal * d3 / 100);
-            
+
+            const modalAkhir = hitungModalAkhir(hargaSupp, d1, d2, d3);
+
             const jual = parseRp(document.getElementById('brgJual').value);
 
-            if(!merek || !nama || modalAkhir < 0 || jual <= 0) return alert("Cek kembali input merek, nama, dan harga!");
+            if(!merek || !nama || modalAkhir < 0 || jual <= 0) return showAlert("Cek kembali input merek, nama, dan harga!");
 
-            // Tentukan ini barang baru atau update barang yang sudah ada
             let targetId;
             if (currentEditId) {
                 targetId = currentEditId;
@@ -243,7 +289,7 @@
             const { error } = await sb.from('products').upsert(productToRow(newItem));
 
             btnSimpan.disabled = false; btnSimpan.innerText = originalLabel;
-            if (error) return alert('Gagal menyimpan ke database: ' + error.message);
+            if (error) return showAlert('Gagal menyimpan ke database: ' + error.message);
 
             const index = db.inventory.findIndex(i => i.id === targetId);
             if (index >= 0) db.inventory[index] = newItem; else db.inventory.push(newItem);
@@ -260,9 +306,9 @@
         }
 
         async function hapusBarang(id) {
-            if(!confirm("Yakin hapus barang ini permanen?")) return;
+            if(!await showConfirm("Yakin hapus barang ini permanen?")) return;
             const { error } = await sb.from('products').delete().eq('id', id);
-            if (error) return alert('Gagal menghapus dari database: ' + error.message);
+            if (error) return showAlert('Gagal menghapus dari database: ' + error.message);
             db.inventory = db.inventory.filter(i => i.id !== id);
             updateMerekDinamis(); renderStok();
         }
@@ -276,7 +322,6 @@
         function renderStok() {
             const tbody = document.getElementById('tabelStok'); tbody.innerHTML = '';
             
-            // Logika Search Bar
             const searchVal = document.getElementById('cariStok') ? document.getElementById('cariStok').value.toLowerCase() : '';
 
             db.inventory.forEach(item => {
@@ -296,8 +341,8 @@
                     const untung = item.jual - item.modalAkhir;
 
                     tbody.innerHTML += `<tr>
-                        <td><span class="badge" style="background:${badgeColor}; font-size:12px;">${item.merek}</span></td>
-                        <td><strong>${item.nama}</strong></td>
+                        <td><span class="badge" style="background:${badgeColor}; font-size:12px;">${escapeHtml(item.merek)}</span></td>
+                        <td><strong>${escapeHtml(item.nama)}</strong></td>
                         <td style="font-weight:bold; text-align:center;">${item.stok}</td>
                         <td>Rp ${formatRp(item.hargaSupp)}</td>
                         <td style="text-align:center;">${discFormat}</td>
@@ -313,7 +358,6 @@
             });
         }
 
-        // --- 5. KASIR & KAS BON ---
         function renderListKasir() {
             const search = document.getElementById('cariKasir').value.toLowerCase();
             const filterMerek = document.getElementById('filterMerekKasir').value;
@@ -324,7 +368,7 @@
                 const matchSearch = (item.nama.toLowerCase().includes(search) || item.merek.toLowerCase().includes(search));
                 if(item.stok > 0 && matchMerek && matchSearch) {
                     tbody.innerHTML += `<tr>
-                        <td><small style="color:#64748b">[${item.merek}]</small><br><strong>${item.nama}</strong><br><small>Stok: ${item.stok}</small></td>
+                        <td><small style="color:#64748b">[${escapeHtml(item.merek)}]</small><br><strong>${escapeHtml(item.nama)}</strong><br><small>Stok: ${item.stok}</small></td>
                         <td class="text-right" style="font-weight:bold; color:var(--accent);">Rp ${formatRp(item.jual)}</td>
                         <td style="text-align:right;"><button class="btn btn-primary" onclick="tambahKeKeranjang(${item.id})">Tambah</button></td>
                     </tr>`;
@@ -336,7 +380,7 @@
             const item = db.inventory.find(i => i.id === id);
             const cartItem = cart.find(c => c.id === id);
             if(cartItem) {
-                if(cartItem.qty >= item.stok) return alert("Peringatan: Stok kurang!");
+                if(cartItem.qty >= item.stok) return showAlert("Peringatan: Stok kurang!");
                 cartItem.qty++;
             } else cart.push({ ...item, qty: 1 });
             renderKeranjang();
@@ -357,7 +401,7 @@
             cart.forEach(c => {
                 const subtotal = c.jual * c.qty; total += subtotal;
                 tbody.innerHTML += `<tr>
-                    <td><small>[${c.merek}]</small> ${c.nama}</td>
+                    <td><small>[${escapeHtml(c.merek)}]</small> ${escapeHtml(c.nama)}</td>
                     <td style="white-space:nowrap;"><button onclick="ubahQty(${c.id}, -1)">-</button> ${c.qty} <button onclick="ubahQty(${c.id}, 1)">+</button></td>
                     <td style="font-weight:bold;">Rp ${formatRp(subtotal)}</td>
                     <td><button class="btn btn-danger" onclick="ubahQty(${c.id}, -999)">X</button></td>
@@ -387,18 +431,17 @@
         }
 
         async function prosesTransaksi() {
-            if(cart.length === 0) return alert("Keranjang kosong!");
+            if(cart.length === 0) return showAlert("Keranjang kosong!");
 
             const customer = document.getElementById('namaCustomer').value.trim();
             const uangBayar = parseRp(document.getElementById('uangBayar').value);
             let status = document.getElementById('statusBayar').value;
 
-            if(status === 'HUTANG' && !customer) return alert("WAJIB mengisi Nama Customer jika mengutang / kas bon!");
+            if(status === 'HUTANG' && !customer) return showAlert("WAJIB mengisi Nama Customer jika mengutang / kas bon!");
 
-            // Validasi stok dulu sebelum kirim apapun ke database
             for (const c of cart) {
                 const invItem = db.inventory.find(i => i.id === c.id);
-                if (!invItem || c.qty > invItem.stok) return alert(`Stok "${c.nama}" tidak cukup!`);
+                if (!invItem || c.qty > invItem.stok) return showAlert(`Stok "${c.nama}" tidak cukup!`);
             }
 
             let totalModal = 0, totalPemasukan = 0;
@@ -407,7 +450,7 @@
             let sisaHutang = 0;
             if(status === 'HUTANG') {
                 if(uangBayar >= totalPemasukan) {
-                    alert("Uang pembayaran mencukupi, status otomatis dialihkan menjadi LUNAS.");
+                    showAlert("Uang pembayaran mencukupi, status otomatis dialihkan menjadi LUNAS.");
                     status = 'LUNAS';
                 } else {
                     sisaHutang = totalPemasukan - uangBayar;
@@ -423,24 +466,20 @@
             const btnBayar = document.querySelector('#kasir .btn-success');
             if (btnBayar) { btnBayar.disabled = true; btnBayar.innerText = 'Menyimpan...'; }
 
-            // 1. Simpan transaksi ke database dulu
-            const { error: saleErr } = await sb.from('sales').insert(saleToRow(transaksi));
-            if (saleErr) {
+            const { error: rpcErr } = await sb.rpc('process_sale', {
+                p_sale: saleToRow(transaksi),
+                p_items: cart.map(c => ({ id: c.id, qty: c.qty }))
+            });
+
+            if (rpcErr) {
                 if (btnBayar) { btnBayar.disabled = false; btnBayar.innerText = 'Cetak Struk & Simpan'; }
-                return alert('Gagal menyimpan transaksi ke database: ' + saleErr.message);
+                return showAlert('Transaksi GAGAL disimpan (tidak ada yang berubah di database): ' + rpcErr.message);
             }
 
-            // 2. Baru kurangi stok tiap barang di database (satu per satu)
-            for (const c of cart) {
+            cart.forEach(c => {
                 const invItem = db.inventory.find(i => i.id === c.id);
-                const newStok = invItem.stok - c.qty;
-                const { error: stokErr } = await sb.from('products').update({ stok: newStok }).eq('id', c.id);
-                if (stokErr) {
-                    alert(`Peringatan: transaksi sudah tersimpan, tapi stok "${c.nama}" gagal terupdate di database (${stokErr.message}). Cek & update manual di tab Stok.`);
-                    continue;
-                }
-                invItem.stok = newStok;
-            }
+                if (invItem) invItem.stok -= c.qty;
+            });
 
             db.sales.push(transaksi);
             if (btnBayar) { btnBayar.disabled = false; btnBayar.innerText = 'Cetak Struk & Simpan'; }
@@ -452,7 +491,6 @@
             hitungKembalian();
         }
 
-        // --- SISTEM CETAK STRUK THERMAL (MULTI-PRINT + WATERMARK) ---
         function buatHTMLStruk(tx, isCopy) {
             let infoHutang = '';
             if(tx.status === 'HUTANG') {
@@ -482,7 +520,7 @@
                         <table style="width: 100%;">
                             <tr><td class="t-left">Tgl: ${formatTgl(tx.tgl)}</td></tr>
                             <tr><td class="t-left">No: ${tx.id}</td></tr>
-                            <tr><td class="t-left">Cust: ${tx.customer} ${statusLabel}</td></tr>
+                            <tr><td class="t-left">Cust: ${escapeHtml(tx.customer)} ${statusLabel}</td></tr>
                         </table>
                     </div>
                     <div class="divider"></div>
@@ -491,7 +529,7 @@
             
             tx.items.forEach(c => {
                 html += `
-                        <tr><td colspan="3"><span class="nota-item-name">${c.merek} - ${c.nama}</span></td></tr>
+                        <tr><td colspan="3"><span class="nota-item-name">${escapeHtml(c.merek)} - ${escapeHtml(c.nama)}</span></td></tr>
                         <tr>
                             <td class="t-left">${c.qty}x</td>
                             <td class="t-left">Rp${formatRp(c.jual)}</td>
@@ -538,7 +576,6 @@
             document.getElementById('printArea').style.display = 'none'; 
         }
 
-        // --- 6. TAB BUKU KAS BON ---
         function renderKasBon() {
             const tbody = document.getElementById('tabelHutang'); tbody.innerHTML = '';
             const listHutang = db.sales.filter(s => s.status === 'HUTANG').slice().reverse();
@@ -550,7 +587,7 @@
 
             listHutang.forEach(s => {
                 tbody.innerHTML += `<tr>
-                    <td>${s.id}</td><td><strong>${s.customer}</strong></td><td>${formatTgl(s.tgl)}</td>
+                    <td>${s.id}</td><td><strong>${escapeHtml(s.customer)}</strong></td><td>${formatTgl(s.tgl)}</td>
                     <td>Rp ${formatRp(s.totalPemasukan)}</td>
                     <td style="color:var(--danger); font-weight:bold;">Rp ${formatRp(s.sisaHutang)}</td>
                     <td><button class="btn btn-warning" onclick="bayarCicilan('${s.id}')">Bayar / Cicil</button></td>
@@ -562,12 +599,12 @@
             const tx = db.sales.find(s => s.id === notaId);
             if(!tx) return;
 
-            const val = prompt(`PEMBAYARAN KAS BON\nNota: ${notaId}\nCustomer: ${tx.customer}\nSisa Hutang: Rp ${formatRp(tx.sisaHutang)}\n\nMasukkan nominal yang dibayar (Angka Saja):`);
+            const val = await showPrompt(`PEMBAYARAN KAS BON\nNota: ${notaId}\nCustomer: ${tx.customer}\nSisa Hutang: Rp ${formatRp(tx.sisaHutang)}\n\nMasukkan nominal yang dibayar (Angka Saja):`);
             if(!val) return;
 
             const bayar = Number(val.replace(/[^0-9]/g, ''));
-            if(bayar <= 0) return alert('Nominal tidak valid!');
-            if(bayar > tx.sisaHutang) return alert('Pembayaran melebihi sisa hutang (kembalian tidak dihitung sistem). Harap masukkan pas!');
+            if(bayar <= 0) return showAlert('Nominal tidak valid!');
+            if(bayar > tx.sisaHutang) return showAlert('Pembayaran melebihi sisa hutang (kembalian tidak dihitung sistem). Harap masukkan pas!');
 
             const newSisaHutang = tx.sisaHutang - bayar;
             const newDibayar = tx.dibayar + bayar;
@@ -575,16 +612,16 @@
             const finalSisa = newStatus === 'LUNAS' ? 0 : newSisaHutang;
 
             const { error } = await sb.from('sales').update({ sisa_hutang: finalSisa, dibayar: newDibayar, status: newStatus }).eq('id', notaId);
-            if (error) return alert('Gagal menyimpan pembayaran ke database: ' + error.message);
+            if (error) return showAlert('Gagal menyimpan pembayaran ke database: ' + error.message);
 
             tx.sisaHutang = finalSisa;
             tx.dibayar = newDibayar;
             tx.status = newStatus;
 
             if(newStatus === 'LUNAS') {
-                alert('Pembayaran sukses! Hutang telah LUNAS sepenuhnya.');
+                showAlert('Pembayaran sukses! Hutang telah LUNAS sepenuhnya.');
             } else {
-                alert(`Pembayaran masuk! Sisa hutang sekarang: Rp ${formatRp(tx.sisaHutang)}`);
+                showAlert(`Pembayaran masuk! Sisa hutang sekarang: Rp ${formatRp(tx.sisaHutang)}`);
             }
 
             renderKasBon();
@@ -592,7 +629,6 @@
             if(document.getElementById('laporan').classList.contains('active')) renderLaporan();
         }
 
-        // --- 7. RIWAYAT ---
         function resetFilterRiwayat() {
             document.getElementById('filterRiwayatAwal').value = '';
             document.getElementById('filterRiwayatAkhir').value = '';
@@ -634,7 +670,7 @@
             filtered.forEach(s => {
                 const badge = s.status === 'HUTANG' ? `<span class="badge" style="background:var(--danger)">BON</span>` : `<span class="badge" style="background:var(--accent)">LUNAS</span>`;
                 tbody.innerHTML += `<tr>
-                    <td>${s.id} <br>${badge}</td><td>${s.customer}</td><td>${formatTgl(s.tgl)}</td>
+                    <td>${s.id} <br>${badge}</td><td>${escapeHtml(s.customer)}</td><td>${formatTgl(s.tgl)}</td>
                     <td>${s.items.length} macam</td><td>Rp ${formatRp(s.totalPemasukan)}</td>
                     <td style="white-space: nowrap;">
                         <button class="btn btn-warning" style="margin-right: 5px; padding: 6px 12px; font-size:12px;" onclick="lihatNota('${s.id}')">Lihat</button>
@@ -645,7 +681,6 @@
         }
         function printUlang(id) { const tx = db.sales.find(s => s.id === id); if(tx) cetakStrukThermal(tx); }
 
-        // --- FITUR LIHAT NOTA (MODAL POP-UP) ---
         function lihatNota(id) {
             const tx = db.sales.find(s => s.id === id);
             if(!tx) return;
@@ -654,7 +689,7 @@
                 <div style="margin-bottom:15px;">
                     <p><strong>No Nota:</strong> ${tx.id}</p>
                     <p><strong>Tanggal:</strong> ${formatTgl(tx.tgl)}</p>
-                    <p><strong>Customer:</strong> ${tx.customer}</p>
+                    <p><strong>Customer:</strong> ${escapeHtml(tx.customer)}</p>
                     <p><strong>Status:</strong> <span class="badge" style="background:${tx.status==='HUTANG'?'var(--danger)':'var(--accent)'}">${tx.status}</span></p>
                 </div>
                 <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin-bottom: 10px;">
@@ -664,7 +699,7 @@
             `;
             
             tx.items.forEach(c => {
-                html += `<tr><td style="padding:5px; border:none; border-bottom:1px solid #eee;">${c.merek} - ${c.nama}</td><td style="text-align:center; padding:5px; border:none; border-bottom:1px solid #eee;">${c.qty}</td><td style="text-align:right; padding:5px; border:none; border-bottom:1px solid #eee;">Rp ${formatRp(c.jual * c.qty)}</td></tr>`;
+                html += `<tr><td style="padding:5px; border:none; border-bottom:1px solid #eee;">${escapeHtml(c.merek)} - ${escapeHtml(c.nama)}</td><td style="text-align:center; padding:5px; border:none; border-bottom:1px solid #eee;">${c.qty}</td><td style="text-align:right; padding:5px; border:none; border-bottom:1px solid #eee;">Rp ${formatRp(c.jual * c.qty)}</td></tr>`;
             });
             
             html += `
@@ -686,12 +721,11 @@
             document.getElementById('viewNotaModal').style.display = 'none';
         }
 
-        // --- 8. RETUR ---
         let returTargetNota = null;
         function cariNotaUntukRetur() {
             const notaId = document.getElementById('cariNotaRetur').value.trim();
             returTargetNota = db.sales.find(s => s.id === notaId);
-            if(!returTargetNota) return alert("Nota tidak ditemukan!");
+            if(!returTargetNota) return showAlert("Nota tidak ditemukan!");
             
             document.getElementById('areaRetur').style.display = 'block';
             document.getElementById('lblIdNota').innerText = returTargetNota.id;
@@ -699,7 +733,7 @@
             const tbody = document.getElementById('tabelItemRetur'); tbody.innerHTML = '';
             returTargetNota.items.forEach((item, index) => {
                 tbody.innerHTML += `<tr>
-                    <td>${item.merek} - ${item.nama}</td><td>${item.qty}</td><td>Rp ${formatRp(item.jual)}</td>
+                    <td>${escapeHtml(item.merek)} - ${escapeHtml(item.nama)}</td><td>${item.qty}</td><td>Rp ${formatRp(item.jual)}</td>
                     <td><input type="number" id="returQty_${index}" max="${item.qty}" min="0" value="0" style="width:70px;"></td>
                     <td><button class="btn btn-warning" onclick="prosesReturItem(${index})">Proses Retur</button></td>
                 </tr>`;
@@ -709,27 +743,24 @@
             const qtyRetur = Number(document.getElementById(`returQty_${itemIndex}`).value);
             const item = returTargetNota.items[itemIndex];
 
-            if(qtyRetur <= 0 || qtyRetur > item.qty) return alert("Jumlah retur tidak valid!");
-            if(!confirm(`Yakin meretur ${qtyRetur}x ${item.nama}?`)) return;
+            if(qtyRetur <= 0 || qtyRetur > item.qty) return showAlert("Jumlah retur tidak valid!");
+            if(!await showConfirm(`Yakin meretur ${qtyRetur}x ${item.nama}?`)) return;
 
             const nilaiRetur = qtyRetur * item.jual;
             const modalRetur = qtyRetur * item.modalAkhir;
             const returnRow = { id: Date.now(), tgl: new Date().toISOString(), notaId: returTargetNota.id, namaBarang: item.nama, qty: qtyRetur, nilaiDikembalikan: nilaiRetur, modalDikembalikan: modalRetur };
 
-            // 1. Simpan catatan retur ke database
             const { error: retErr } = await sb.from('returns').insert(returnToRow(returnRow));
-            if (retErr) return alert('Gagal menyimpan retur ke database: ' + retErr.message);
+            if (retErr) return showAlert('Gagal menyimpan retur ke database: ' + retErr.message);
 
-            // 2. Kembalikan stok barang (kalau barangnya masih ada)
             const invItem = db.inventory.find(i => i.id === item.id);
             if (invItem) {
                 const newStok = invItem.stok + qtyRetur;
                 const { error: stokErr } = await sb.from('products').update({ stok: newStok }).eq('id', invItem.id);
-                if (stokErr) alert('Peringatan: retur tersimpan, tapi stok gagal diupdate: ' + stokErr.message);
+                if (stokErr) showAlert('Peringatan: retur tersimpan, tapi stok gagal diupdate: ' + stokErr.message);
                 else invItem.stok = newStok;
             }
 
-            // 3. Update total transaksi asal & sisa hutang di database
             const newTotalPemasukan = returTargetNota.totalPemasukan - nilaiRetur;
             const newTotalModal = returTargetNota.totalModal - modalRetur;
             let newSisaHutang = returTargetNota.sisaHutang;
@@ -739,9 +770,8 @@
                 if (newSisaHutang <= 0) { newStatus = 'LUNAS'; newSisaHutang = 0; }
             }
             const { error: saleErr } = await sb.from('sales').update({ total_pemasukan: newTotalPemasukan, total_modal: newTotalModal, sisa_hutang: newSisaHutang, status: newStatus }).eq('id', returTargetNota.id);
-            if (saleErr) alert('Peringatan: retur tersimpan, tapi transaksi asal gagal terupdate: ' + saleErr.message);
+            if (saleErr) showAlert('Peringatan: retur tersimpan, tapi transaksi asal gagal terupdate: ' + saleErr.message);
 
-            // Update state lokal
             db.returns.push(returnRow);
             item.qty -= qtyRetur;
             returTargetNota.totalPemasukan = newTotalPemasukan;
@@ -749,10 +779,9 @@
             returTargetNota.sisaHutang = newSisaHutang;
             returTargetNota.status = newStatus;
 
-            alert("Retur sukses!"); cariNotaUntukRetur(); renderStok();
+            showAlert("Retur sukses!"); cariNotaUntukRetur(); renderStok();
         }
 
-        // --- 9. PENGELUARAN ---
         function resetFilterPengeluaran() {
             document.getElementById('filterPengeluaranAwal').value = '';
             document.getElementById('filterPengeluaranAkhir').value = '';
@@ -763,16 +792,16 @@
             const tgl = document.getElementById('tglKeluar').value;
             const ket = document.getElementById('ketKeluar').value;
             const nom = parseRp(document.getElementById('nomKeluar').value);
-            if(!tgl || !ket || nom <= 0) return alert("Lengkapi data!");
+            if(!tgl || !ket || nom <= 0) return showAlert("Lengkapi data!");
 
             const expense = { id: Date.now(), tgl: new Date(tgl).toISOString(), ket, nominal: nom };
             const { error } = await sb.from('expenses').insert(expenseToRow(expense));
-            if (error) return alert('Gagal menyimpan ke database: ' + error.message);
+            if (error) return showAlert('Gagal menyimpan ke database: ' + error.message);
 
             db.expenses.push(expense);
             document.getElementById('ketKeluar').value = '';
             document.getElementById('nomKeluar').value = '';
-            alert('Tersimpan!');
+            showAlert('Tersimpan!');
 
             document.getElementById('filterPengeluaranAwal').valueAsDate = new Date();
             document.getElementById('filterPengeluaranAkhir').valueAsDate = new Date();
@@ -812,15 +841,14 @@
             }
 
             filtered.forEach(e => { 
-                tbody.innerHTML += `<tr><td>${formatTgl(e.tgl)}</td><td>${e.ket}</td><td>Rp ${formatRp(e.nominal)}</td></tr>`; 
+                tbody.innerHTML += `<tr><td>${formatTgl(e.tgl)}</td><td>${escapeHtml(e.ket)}</td><td>Rp ${formatRp(e.nominal)}</td></tr>`; 
             });
         }
 
-        // --- 10. LAPORAN MUTASI ---
         function renderLaporan() {
             const startStr = document.getElementById('lapTglAwal').value;
             const endStr = document.getElementById('lapTglAkhir').value;
-            if(!startStr || !endStr) return alert("Pilih tanggal awal dan akhir!");
+            if(!startStr || !endStr) return showAlert("Pilih tanggal awal dan akhir!");
             
             const startDate = new Date(startStr).setHours(0,0,0,0);
             const endDate = new Date(endStr).setHours(23,59,59,999);
@@ -854,7 +882,6 @@
             document.getElementById('lapLaba').innerText = `Rp ${formatRp(profitBersih)}`;
         }
 
-        // --- Init App (menunggu data dari Supabase dulu sebelum apapun ditampilkan) ---
         async function initApp() {
             const loadingEl = document.getElementById('loadingOverlay');
             try {
